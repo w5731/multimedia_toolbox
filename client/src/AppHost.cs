@@ -24,14 +24,7 @@ namespace MultimediaClient
         {
             _app = app;
 
-            // Win7 默认可能不含 TLS1.2,尽量兼容;失败也不影响 HTTP 场景
-            try
-            {
-                ServicePointManager.SecurityProtocol =
-                    SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                ServicePointManager.DefaultConnectionLimit = 8;
-            }
-            catch { }
+            // TLS 设置已在 Program.Main 最早处完成(配对窗口也需要)
 
             if (Config.AutoStart) AutoStart.Set(true);
 

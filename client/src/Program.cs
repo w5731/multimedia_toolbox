@@ -16,6 +16,18 @@ namespace MultimediaClient
             if (!created) return; // 已有实例在运行
 
             Logger.Init();
+
+            // 必须在最早启用 TLS1.2:配对窗口在此之前发 HTTPS 请求,
+            // 裸编译的 exe 默认仅 TLS1.0,现代服务器(仅支持 1.2+)会直接拒绝握手
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol =
+                    System.Net.SecurityProtocolType.Tls | System.Net.SecurityProtocolType.Tls11
+                    | System.Net.SecurityProtocolType.Tls12;
+                System.Net.ServicePointManager.DefaultConnectionLimit = 8;
+            }
+            catch { }
+
             AppDomain.CurrentDomain.UnhandledException += delegate (object s, UnhandledExceptionEventArgs e)
             {
                 Logger.Error("未处理异常", e.ExceptionObject as Exception);
