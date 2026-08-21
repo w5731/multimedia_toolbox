@@ -69,6 +69,8 @@ toolbox.example.com {
 
 纯内网(校园网)使用可保持 HTTP。
 
+> **Win7 客户端 + HTTPS 的注意**:Win7 需已安装 .NET 4.8 并启用系统 TLS1.2(保持 Windows Update 的最新 Win7 SP1 默认可用;若叫号/配对提示 SSL/TLS 通道创建失败,在注册表 `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp` 加 DWORD `DefaultSecureProtocol = 0x00000A00` 后重启)。
+
 ### 备份
 
 数据库只有一个文件 `server/data/toolbox.db`,每天复制一份即可:
