@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - 班级多媒体任务看板</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  .card {
+    background: #fff; border-radius: 16px; padding: 40px 44px; width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  h1 { font-size: 22px; color: #1a2980; text-align: center; margin-bottom: 6px; }
+  .sub { text-align: center; color: #888; font-size: 13px; margin-bottom: 28px; }
+  label { display: block; font-size: 14px; color: #555; margin: 14px 0 6px; }
+  input {
+    width: 100%; padding: 12px 14px; font-size: 16px; border: 2px solid #ddd;
+    border-radius: 8px; outline: none; transition: border-color .2s;
+  }
+  input:focus { border-color: #1a2980; }
+  button {
+    width: 100%; margin-top: 24px; padding: 13px; font-size: 17px; font-weight: bold;
+    color: #fff; background: #1a2980; border: none; border-radius: 8px; cursor: pointer;
+  }
+  button:hover { background: #27399a; }
+  button:disabled { background: #999; cursor: wait; }
+  .err { color: #d32f2f; font-size: 14px; margin-top: 14px; text-align: center; min-height: 20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>班级多媒体任务看板</h1>
+  <div class="sub">教师管理系统</div>
+  <form id="form">
+    <label>账号</label>
+    <input id="username" autocomplete="username" autofocus>
+    <label>密码</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <button id="btn" type="submit">登 录</button>
+    <div class="err" id="err"></div>
+  </form>
+</div>
+<script>
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn');
+  const err = document.getElementById('err');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = '登录中...';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+      }),
+    });
+    const d = await r.json();
+    if (d.ok) { location.href = '/app.html'; }
+    else { err.textContent = d.error || '登录失败'; }
+  } catch (ex) {
+    err.textContent = '网络错误,请检查服务器连接';
+  }
+  btn.disabled = false; btn.textContent = '登 录';
+});
+</script>
+</body>
+</html>

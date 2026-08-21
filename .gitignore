@@ -1,0 +1,15 @@
+# dependencies
+server/node_modules/
+
+# runtime data
+server/data/
+client/logs/
+client/config.json
+client/cache.json
+client/bell.wav
+
+# local tooling / artifacts
+client/*.png
+.zcode/
+*.log
+nul

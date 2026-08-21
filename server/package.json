@@ -1,0 +1,18 @@
+{
+  "name": "multimedia-toolbox-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "班级多媒体任务看板系统 - 服务器端",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.21.2"
+  }
+}
