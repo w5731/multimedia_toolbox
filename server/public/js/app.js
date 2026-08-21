@@ -41,6 +41,14 @@ const CALL_STATUS = {
   closed: ['已关闭', 'gray'], expired: ['已过期', 'gray'],
 };
 
+// 所有表格包一层可横向滚动的容器,窄屏(手机)上列多时可左右滑动
+document.querySelectorAll('table').forEach(t => {
+  const w = document.createElement('div');
+  w.className = 'table-wrap';
+  t.parentNode.insertBefore(w, t);
+  w.appendChild(t);
+});
+
 function taskTimeText(t) {
   return t.end_time ? `${t.start_time} - ${t.end_time}` : t.start_time;
 }
