@@ -15,13 +15,15 @@ namespace MultimediaClient
     /// </summary>
     internal class OverlayWindow : Window
     {
-        private static readonly Brush BrushPanel = new SolidColorBrush(Color.FromArgb(190, 16, 22, 40));
-        private static readonly Brush BrushWhite = Brushes.White;
-        private static readonly Brush BrushDim = new SolidColorBrush(Color.FromRgb(160, 170, 190));
-        private static readonly Brush BrushCyan = new SolidColorBrush(Color.FromRgb(77, 208, 225));
-        private static readonly Brush BrushAmber = new SolidColorBrush(Color.FromRgb(255, 202, 40));
-        private static readonly Brush BrushAmberBg = new SolidColorBrush(Color.FromArgb(64, 255, 193, 7));
-        private static readonly Brush BrushRed = new SolidColorBrush(Color.FromRgb(239, 83, 80));
+        // 暖色调色板(与教师端网站一致):深石灰底 + 琥珀点缀,远看柔和不刺眼
+        private static readonly Brush BrushPanel = new SolidColorBrush(Color.FromArgb(208, 28, 25, 23));
+        private static readonly Brush BrushWhite = new SolidColorBrush(Color.FromRgb(250, 250, 249));
+        private static readonly Brush BrushDim = new SolidColorBrush(Color.FromRgb(168, 162, 158));
+        private static readonly Brush BrushRemark = new SolidColorBrush(Color.FromRgb(214, 211, 209));
+        private static readonly Brush BrushTime = new SolidColorBrush(Color.FromRgb(252, 211, 77));
+        private static readonly Brush BrushAmber = new SolidColorBrush(Color.FromRgb(251, 191, 36));
+        private static readonly Brush BrushAmberBg = new SolidColorBrush(Color.FromArgb(46, 251, 191, 36));
+        private static readonly Brush BrushRed = new SolidColorBrush(Color.FromRgb(248, 113, 113));
         private static readonly FontFamily Font = new FontFamily("Microsoft YaHei");
 
         private readonly DispatcherTimer _timer;
@@ -119,49 +121,56 @@ namespace MultimediaClient
 
             Border root = new Border();
             root.Background = BrushPanel;
-            root.CornerRadius = new CornerRadius(16);
-            root.Padding = new Thickness(26 * _scale, 18 * _scale, 26 * _scale, 18 * _scale);
+            root.CornerRadius = new CornerRadius(18);
+            root.Padding = new Thickness(30 * _scale, 24 * _scale, 30 * _scale, 22 * _scale);
 
             StackPanel panel = new StackPanel();
             root.Child = panel;
 
             // 通知栏(有通知时可见)
             _noticeBar = new Border();
-            _noticeBar.Background = new SolidColorBrush(Color.FromArgb(220, 255, 143, 0));
-            _noticeBar.CornerRadius = new CornerRadius(8);
-            _noticeBar.Padding = new Thickness(14, 8, 14, 8);
-            _noticeBar.Margin = new Thickness(0, 0, 0, 12);
+            _noticeBar.Background = new SolidColorBrush(Color.FromArgb(235, 245, 158, 11));
+            _noticeBar.CornerRadius = new CornerRadius(10);
+            _noticeBar.Padding = new Thickness(16, 10, 16, 10);
+            _noticeBar.Margin = new Thickness(0, 0, 0, 14);
             _noticeText = new TextBlock();
-            _noticeText.Foreground = new SolidColorBrush(Color.FromRgb(40, 24, 0));
+            _noticeText.Foreground = new SolidColorBrush(Color.FromRgb(41, 37, 36));
             _noticeText.FontFamily = Font;
             _noticeText.FontWeight = FontWeights.Bold;
-            _noticeText.FontSize = 24 * _scale;
+            _noticeText.FontSize = 26 * _scale;
             _noticeText.TextWrapping = TextWrapping.Wrap;
             _noticeBar.Child = _noticeText;
             _noticeBar.Visibility = Visibility.Collapsed;
             panel.Children.Add(_noticeBar);
 
             // 时钟
-            _clockText = MakeText(56 * _scale, BrushWhite, FontWeights.Bold);
+            _clockText = MakeText(84 * _scale, BrushWhite, FontWeights.Bold);
             panel.Children.Add(_clockText);
 
             // 日期 + 星期 + 班级
-            _dateText = MakeText(20 * _scale, BrushDim, FontWeights.Normal);
+            _dateText = MakeText(26 * _scale, BrushDim, FontWeights.Normal);
+            _dateText.Margin = new Thickness(0, 2, 0, 0);
             panel.Children.Add(_dateText);
 
             // 离线提示
-            _offlineText = MakeText(16 * _scale, BrushRed, FontWeights.Bold);
+            _offlineText = MakeText(20 * _scale, BrushRed, FontWeights.Bold);
             _offlineText.Visibility = Visibility.Collapsed;
-            _offlineText.Margin = new Thickness(0, 4, 0, 0);
+            _offlineText.Margin = new Thickness(0, 6, 0, 0);
             _offlineText.Text = "● 离线(显示缓存内容)";
             panel.Children.Add(_offlineText);
 
             // 分隔线
             Border divider = new Border();
-            divider.Height = 2;
-            divider.Background = new SolidColorBrush(Color.FromArgb(80, 255, 255, 255));
-            divider.Margin = new Thickness(0, 14 * _scale, 0, 14 * _scale);
+            divider.Height = 1;
+            divider.Background = new SolidColorBrush(Color.FromArgb(36, 255, 255, 255));
+            divider.Margin = new Thickness(0, 16 * _scale, 0, 12 * _scale);
             panel.Children.Add(divider);
+
+            // 栏目小标题
+            TextBlock section = MakeText(22 * _scale, BrushDim, FontWeights.SemiBold);
+            section.Text = "今日安排";
+            section.Margin = new Thickness(0, 0, 0, 10 * _scale);
+            panel.Children.Add(section);
 
             // 任务列表(可滚动,任务多时不会撑爆屏幕)
             ScrollViewer scroller = new ScrollViewer();
@@ -172,7 +181,7 @@ namespace MultimediaClient
             panel.Children.Add(scroller);
 
             // 下一项倒计时
-            _countdownText = MakeText(20 * _scale, BrushAmber, FontWeights.Bold);
+            _countdownText = MakeText(26 * _scale, BrushAmber, FontWeights.Bold);
             _countdownText.Margin = new Thickness(0, 14 * _scale, 0, 0);
             panel.Children.Add(_countdownText);
 
@@ -181,20 +190,20 @@ namespace MultimediaClient
             // 位置与尺寸
             if (_position == "top")
             {
-                Width = wa.Width * 0.92;
+                Width = wa.Width * 0.94;
                 SizeToContent = SizeToContent.Height;
                 Left = wa.Left + (wa.Width - Width) / 2;
                 Top = wa.Top + 14;
             }
             else
             {
-                double w = Math.Max(420 * _scale, wa.Width * 0.26);
+                double w = Math.Max(560 * _scale, wa.Width * 0.30);
                 Width = w;
                 // 固定高度:透明窗口的 SizeToContent 在部分系统上不可靠
-                Height = wa.Height * 0.86;
+                Height = wa.Height * 0.88;
                 SizeToContent = SizeToContent.Manual;
                 Left = _position == "left" ? wa.Left + 18 : wa.Right - w - 18;
-                Top = wa.Top + wa.Height * 0.07;
+                Top = wa.Top + wa.Height * 0.06;
             }
         }
 
@@ -257,7 +266,7 @@ namespace MultimediaClient
             _tasksPanel.Children.Clear();
             if (today.Count == 0)
             {
-                TextBlock empty = MakeText(24 * _scale, BrushDim, FontWeights.Normal);
+                TextBlock empty = MakeText(30 * _scale, BrushDim, FontWeights.Normal);
                 empty.Text = "今日暂无任务";
                 _tasksPanel.Children.Add(empty);
             }
@@ -301,39 +310,54 @@ namespace MultimediaClient
                     "yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) < now);
 
             Border row = new Border();
-            row.CornerRadius = new CornerRadius(8);
-            row.Padding = new Thickness(12, 7 * _scale, 12, 7 * _scale);
-            row.Margin = new Thickness(0, 0, 0, 6 * _scale);
+            row.CornerRadius = new CornerRadius(10);
+            row.Padding = new Thickness(14 * _scale, 10 * _scale, 14 * _scale, 10 * _scale);
+            row.Margin = new Thickness(0, 0, 0, 8 * _scale);
             if (active) row.Background = BrushAmberBg;
 
-            // 两列网格:时间列自适应宽度,内容列占满剩余空间并自动换行
+            // 两列:时间列固定不换行,右列是"项目 + 备注"上下两行
             Grid grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            TextBlock time = MakeText(26 * _scale, active ? BrushAmber : BrushCyan, FontWeights.Bold);
+            TextBlock time = MakeText(34 * _scale, active ? BrushAmber : BrushTime, FontWeights.Bold);
             time.Text = t.TimeText;
             time.TextWrapping = TextWrapping.NoWrap;
-            time.Margin = new Thickness(0, 0, 14, 0);
+            time.Margin = new Thickness(0, 0, 16 * _scale, 0);
             time.VerticalAlignment = VerticalAlignment.Top;
             Grid.SetColumn(time, 0);
             grid.Children.Add(time);
 
-            TextBlock title = MakeText(26 * _scale,
-                past ? BrushDim : BrushWhite, active ? FontWeights.Bold : FontWeights.Normal);
-            if (past) title.Opacity = 0.55;
+            StackPanel body = new StackPanel();
+
+            TextBlock title = MakeText(34 * _scale,
+                past ? BrushDim : BrushWhite, active ? FontWeights.Bold : FontWeights.SemiBold);
             title.Inlines.Add(new System.Windows.Documents.Run(t.Title));
             if (active)
             {
                 // “进行中”作为同行内联标签,随内容自动换行,不会溢出
                 System.Windows.Documents.Run tagRun = new System.Windows.Documents.Run("  [进行中]");
                 tagRun.Foreground = BrushAmber;
-                tagRun.FontSize = 18 * _scale;
+                tagRun.FontSize = 24 * _scale;
                 tagRun.FontWeight = FontWeights.Bold;
                 title.Inlines.Add(tagRun);
             }
-            Grid.SetColumn(title, 1);
-            grid.Children.Add(title);
+            body.Children.Add(title);
+
+            // 备注:有内容才显示,稍小一号、浅色,保证远距离可读
+            if (t.Remark.Length > 0)
+            {
+                TextBlock remark = MakeText(25 * _scale,
+                    past ? BrushDim : BrushRemark, FontWeights.Normal);
+                remark.Text = "备注:" + t.Remark;
+                remark.Margin = new Thickness(0, 4 * _scale, 0, 0);
+                body.Children.Add(remark);
+            }
+
+            Grid.SetColumn(body, 1);
+            grid.Children.Add(body);
+
+            if (past) grid.Opacity = 0.55;
 
             row.Child = grid;
             return row;
