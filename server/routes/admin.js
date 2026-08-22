@@ -147,9 +147,10 @@ router.post('/tasks', (req, res) => {
   const err = validateTask(body);
   if (err) return res.status(400).json({ ok: false, error: err });
   const r = db.prepare(
-    `INSERT INTO tasks (class_id, title, start_time, end_time, date_mode, date_start, date_end, weekdays, enabled, sort, created_by)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
-    classId, String(body.title).trim().slice(0, 100), body.start_time, body.end_time || '',
+    `INSERT INTO tasks (class_id, title, remark, start_time, end_time, date_mode, date_start, date_end, weekdays, enabled, sort, created_by)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    classId, String(body.title).trim().slice(0, 100), String(body.remark || '').trim().slice(0, 300),
+    body.start_time, body.end_time || '',
     body.date_mode || 'daily', body.date_start || '', body.date_end || '',
     body.weekdays || '', body.enabled === false ? 0 : 1, Number(body.sort) || 0, req.teacher.id);
   bumpDataVersion(classId);
@@ -165,9 +166,10 @@ router.put('/tasks/:id', (req, res) => {
   const err = validateTask(merged);
   if (err) return res.status(400).json({ ok: false, error: err });
   db.prepare(
-    `UPDATE tasks SET title=?, start_time=?, end_time=?, date_mode=?, date_start=?, date_end=?,
+    `UPDATE tasks SET title=?, remark=?, start_time=?, end_time=?, date_mode=?, date_start=?, date_end=?,
      weekdays=?, enabled=?, sort=?, updated_at=? WHERE id=?`).run(
-    String(merged.title).trim().slice(0, 100), merged.start_time, merged.end_time || '',
+    String(merged.title).trim().slice(0, 100), String(merged.remark || '').trim().slice(0, 300),
+    merged.start_time, merged.end_time || '',
     merged.date_mode, merged.date_start || '', merged.date_end || '', merged.weekdays || '',
     merged.enabled ? 1 : 0, Number(merged.sort) || 0, nowStr(), task.id);
   bumpDataVersion(task.class_id);
@@ -197,13 +199,13 @@ router.post('/tasks/copy-day', (req, res) => {
   const source = rows.filter(t => taskAppliesOnDate(t, from_date));
   if (!source.length) return res.status(400).json({ ok: false, error: '该日期没有可复制的任务' });
   const insert = db.prepare(
-    `INSERT INTO tasks (class_id, title, start_time, end_time, date_mode, date_start, enabled, sort, created_by)
-     VALUES (?,?,?,?,'once',?,1,?,?)`);
+    `INSERT INTO tasks (class_id, title, remark, start_time, end_time, date_mode, date_start, enabled, sort, created_by)
+     VALUES (?,?,?,?,?,'once',?,1,?,?)`);
   let count = 0;
   const tx = db.transaction(() => {
     for (const d of validTargets) {
       for (const t of source) {
-        insert.run(classId, t.title, t.start_time, t.end_time, d, t.sort, req.teacher.id);
+        insert.run(classId, t.title, t.remark || '', t.start_time, t.end_time, d, t.sort, req.teacher.id);
         count++;
       }
     }

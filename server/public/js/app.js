@@ -53,6 +53,12 @@ function taskTimeText(t) {
   return t.end_time ? `${t.start_time} - ${t.end_time}` : t.start_time;
 }
 
+// 内容单元格:标题 + 可选的备注小字
+function taskTitleHtml(t) {
+  const remark = (t.remark || '').trim();
+  return esc(t.title) + (remark ? `<div class="cell-remark">备注:${esc(remark)}</div>` : '');
+}
+
 function taskDateText(t) {
   switch (t.date_mode) {
     case 'daily': return '每天';
@@ -166,12 +172,12 @@ async function loadTasks() {
   ]);
   $('task-preview-title').textContent = `${date} 生效任务(共 ${today.tasks.length} 项)`;
   $('task-preview-table').querySelector('tbody').innerHTML = today.tasks.length
-    ? today.tasks.map(t => `<tr><td class="time-tag">${taskTimeText(t)}</td><td class="title-cell">${esc(t.title)}</td></tr>`).join('')
+    ? today.tasks.map(t => `<tr><td class="time-tag">${taskTimeText(t)}</td><td class="title-cell">${taskTitleHtml(t)}</td></tr>`).join('')
     : '<tr><td colspan="2" class="empty">这一天没有任务</td></tr>';
   $('task-table').querySelector('tbody').innerHTML = all.tasks.length
     ? all.tasks.map(t => `<tr class="${t.enabled ? '' : 'row-disabled'}">
         <td class="time-tag">${taskTimeText(t)}</td>
-        <td class="title-cell">${esc(t.title)}</td>
+        <td class="title-cell">${taskTitleHtml(t)}</td>
         <td>${taskDateText(t)}</td>
         <td><span class="badge ${t.enabled ? 'green' : 'gray'}">${t.enabled ? '启用' : '停用'}</span></td>
         <td style="white-space:nowrap">
@@ -187,6 +193,7 @@ function openTaskModal(t) {
   editingTaskId = t ? t.id : null;
   $('task-modal-title').textContent = t ? '编辑任务' : '新建任务';
   $('f-title').value = t ? t.title : '';
+  $('f-remark').value = t ? (t.remark || '') : '';
   $('f-start').value = t ? t.start_time : '';
   $('f-end').value = t ? (t.end_time || '') : '';
   $('f-mode').value = t ? t.date_mode : 'daily';
@@ -211,6 +218,7 @@ async function saveTask() {
   const mode = $('f-mode').value;
   const body = {
     title: $('f-title').value.trim(),
+    remark: $('f-remark').value.trim(),
     start_time: $('f-start').value,
     end_time: $('f-end').value || '',
     date_mode: mode,

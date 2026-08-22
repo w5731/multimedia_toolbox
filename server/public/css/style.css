@@ -186,6 +186,7 @@ input[type=checkbox] { accent-color: var(--primary); width: 15px; height: 15px; 
 /* 任务列表中的时间 */
 .time-tag { font-weight: 600; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .title-cell { font-size: 14.5px; }
+.cell-remark { font-size: 13px; color: var(--ink-3); margin-top: 3px; line-height: 1.5; }
 .row-disabled td { opacity: .45; }
 
 /* 叫号大表单 */

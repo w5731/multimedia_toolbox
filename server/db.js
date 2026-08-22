@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   class_id INTEGER NOT NULL,
   title TEXT NOT NULL,
+  remark TEXT DEFAULT '',
   start_time TEXT NOT NULL,
   end_time TEXT DEFAULT '',
   date_mode TEXT DEFAULT 'daily',
@@ -117,6 +118,9 @@ CREATE INDEX IF NOT EXISTS idx_calls_class ON calls(class_id, status);
 CREATE INDEX IF NOT EXISTS idx_sessions_teacher ON sessions(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
 `);
+
+// 旧数据库升级:为 tasks 补充备注列(列已存在时会抛错,忽略)
+try { db.exec(`ALTER TABLE tasks ADD COLUMN remark TEXT DEFAULT ''`); } catch (e) { /* 列已存在 */ }
 
 // 首次启动创建默认管理员
 const teacherCount = db.prepare('SELECT COUNT(*) AS c FROM teachers').get().c;

@@ -75,7 +75,7 @@ router.get('/data', clientAuth, (req, res) => {
   const c = req.client;
   if (!c.class_id) return res.json({ ok: true, server_time: nowStr(), unbound: true, settings: null, notice: null, tasks: [], data_version: 0 });
   const tasks = db.prepare(
-    `SELECT id, title, start_time, end_time, date_mode, date_start, date_end, weekdays
+    `SELECT id, title, remark, start_time, end_time, date_mode, date_start, date_end, weekdays
      FROM tasks WHERE class_id = ? AND enabled = 1 ORDER BY start_time, sort, id`).all(c.class_id);
   const notice = db.prepare('SELECT text, enabled FROM notices WHERE class_id = ?').get(c.class_id)
     || { text: '', enabled: 0 };

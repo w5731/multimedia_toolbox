@@ -7,6 +7,7 @@ namespace MultimediaClient
     {
         public int Id;
         public string Title = "";
+        public string Remark = "";      // 备注:显示在内容下方,如请假方式说明
         public string StartTime = "";   // "HH:MM"
         public string EndTime = "";     // "" 表示时间点
         public string DateMode = "daily"; // once | range | weekly | daily
@@ -19,6 +20,7 @@ namespace MultimediaClient
             TaskItem t = new TaskItem();
             t.Id = Json.GetInt(d, "id", 0);
             t.Title = Json.GetString(d, "title", "");
+            t.Remark = Json.GetString(d, "remark", "");
             t.StartTime = Json.GetString(d, "start_time", "");
             t.EndTime = Json.GetString(d, "end_time", "");
             t.DateMode = Json.GetString(d, "date_mode", "daily");
@@ -31,7 +33,7 @@ namespace MultimediaClient
         public Dictionary<string, object> ToJson()
         {
             Dictionary<string, object> d = new Dictionary<string, object>();
-            d["id"] = Id; d["title"] = Title; d["start_time"] = StartTime; d["end_time"] = EndTime;
+            d["id"] = Id; d["title"] = Title; d["remark"] = Remark; d["start_time"] = StartTime; d["end_time"] = EndTime;
             d["date_mode"] = DateMode; d["date_start"] = DateStart; d["date_end"] = DateEnd;
             d["weekdays"] = Weekdays;
             return d;
