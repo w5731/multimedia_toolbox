@@ -114,6 +114,7 @@ namespace MultimediaClient
 
             // 自动更新:服务器发布了更高版本时通知主程序(旧服务器无该字段,自动跳过)
             string latest = Json.GetString(r.Data, "latest_version", "");
+            DataStore.LatestVersion = latest;
             if (SelfUpdate.ShouldUpdate(latest))
             {
                 Action<string> ua = UpdateAvailable;

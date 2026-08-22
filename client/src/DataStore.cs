@@ -34,6 +34,8 @@ namespace MultimediaClient
         public static List<TaskItem> Tasks = new List<TaskItem>();
         public static int DataVersion = -1;
         public static string ServerTime = "";
+        // 服务器公布的最新客户端版本号(心跳带回,未发布或离线时为空)
+        public static string LatestVersion = "";
 
         /// <summary>数据变化时在 UI 线程触发</summary>
         public static event Action Updated;

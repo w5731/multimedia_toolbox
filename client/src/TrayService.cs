@@ -5,10 +5,12 @@ using System.Windows.Forms;
 
 namespace MultimediaClient
 {
-    /// <summary>系统托盘:设置 / 立即刷新 / 退出(需密码)</summary>
+    /// <summary>系统托盘:版本信息 / 设置 / 立即刷新 / 退出(需密码)</summary>
     internal class TrayService : IDisposable
     {
         private NotifyIcon _tray;
+        private ToolStripMenuItem _verLatestItem;
+        private bool _online;
 
         public void Start()
         {
@@ -18,16 +20,44 @@ namespace MultimediaClient
             _tray.Visible = true;
 
             ContextMenuStrip menu = new ContextMenuStrip();
+            // 版本信息(只读展示):当前版本固定,服务器最新随心跳更新,打开菜单时刷新
+            ToolStripMenuItem verCurrent = new ToolStripMenuItem("当前版本  v" + AppHost.Version);
+            verCurrent.Enabled = false;
+            _verLatestItem = new ToolStripMenuItem("服务器最新  获取中…");
+            _verLatestItem.Enabled = false;
+            menu.Items.Add(verCurrent);
+            menu.Items.Add(_verLatestItem);
+            menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("设置", null, delegate { OpenSettings(); });
             menu.Items.Add("立即刷新", null, delegate { AppHost.RefreshNow(); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("退出", null, delegate { TryExit(); });
+            menu.Opening += delegate { RefreshVersionItem(); };
             _tray.ContextMenuStrip = menu;
             _tray.DoubleClick += delegate { OpenSettings(); };
         }
 
+        private void RefreshVersionItem()
+        {
+            try
+            {
+                string latest = DataStore.LatestVersion;
+                if (latest.Length == 0)
+                {
+                    _verLatestItem.Text = "服务器最新  " + (_online ? "未发布" : "未知(离线)");
+                }
+                else
+                {
+                    bool newer = SelfUpdate.ShouldUpdate(latest);
+                    _verLatestItem.Text = "服务器最新  v" + latest + (newer ? "(有新版)" : "(已是最新)");
+                }
+            }
+            catch { }
+        }
+
         public void SetStatus(bool online, string className)
         {
+            _online = online;
             try
             {
                 if (_tray != null)
