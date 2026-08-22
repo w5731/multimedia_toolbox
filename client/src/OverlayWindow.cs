@@ -33,6 +33,9 @@ namespace MultimediaClient
         private TextBlock _dateText;
         private TextBlock _offlineText;
         private StackPanel _tasksPanel;
+        private ScrollViewer _scroller;
+        private List<TaskItem> _todayList = new List<TaskItem>();
+        private bool _centerPending;
         private TextBlock _countdownText;
         private string _position = "right";
         private double _scale = 1.0;
@@ -178,6 +181,16 @@ namespace MultimediaClient
             scroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             _tasksPanel = new StackPanel();
             scroller.Content = _tasksPanel;
+            // 布局完成后(RenderSize 有效)再执行待定的居中滚动
+            scroller.LayoutUpdated += delegate
+            {
+                if (_centerPending)
+                {
+                    _centerPending = false;
+                    CenterOnActive();
+                }
+            };
+            _scroller = scroller;
             panel.Children.Add(scroller);
 
             // 下一项倒计时
@@ -264,6 +277,7 @@ namespace MultimediaClient
             });
 
             _tasksPanel.Children.Clear();
+            _todayList = today;
             if (today.Count == 0)
             {
                 TextBlock empty = MakeText(30 * _scale, BrushDim, FontWeights.Normal);
@@ -277,6 +291,8 @@ namespace MultimediaClient
                     _tasksPanel.Children.Add(BuildTaskRow(t, now));
                 }
             }
+            // 布局完成后(LayoutUpdated)把当前进行中(或下一个)的任务滚动到列表中间
+            _centerPending = true;
 
             // 下一项倒计时
             TaskItem next = null;
@@ -302,6 +318,49 @@ namespace MultimediaClient
             }
         }
 
+        /// <summary>
+        /// 任务列表超出可视高度时,自动滚动到"焦点任务"上下居中:
+        /// 优先当前进行中的任务;没有进行中的则选下一个即将开始的。
+        /// 看板不可交互(鼠标穿透),所以始终自动定位,无需人工滚动。
+        /// </summary>
+        private void CenterOnActive()
+        {
+            try
+            {
+                if (_scroller == null || _tasksPanel == null) return;
+                if (_scroller.ScrollableHeight <= 0) return; // 列表全部可见,无需滚动
+                DateTime now = TimeSync.Now;
+                int idx = -1;
+                for (int i = 0; i < _todayList.Count && i < _tasksPanel.Children.Count; i++)
+                {
+                    if (_todayList[i].IsActiveNow(now)) { idx = i; break; }
+                }
+                if (idx < 0)
+                {
+                    for (int i = 0; i < _todayList.Count && i < _tasksPanel.Children.Count; i++)
+                    {
+                        if (_todayList[i].StartOn(now.Date) > now) { idx = i; break; }
+                    }
+                }
+                if (idx < 0) idx = _tasksPanel.Children.Count - 1; // 都已过时,看最后一项
+                double top = 0;
+                for (int i = 0; i < idx; i++)
+                {
+                    top += _tasksPanel.Children[i].RenderSize.Height;
+                    FrameworkElement fe = _tasksPanel.Children[i] as FrameworkElement;
+                    if (fe != null) top += fe.Margin.Top + fe.Margin.Bottom;
+                }
+                FrameworkElement target = _tasksPanel.Children[idx] as FrameworkElement;
+                if (target == null) return;
+                double center = top + target.RenderSize.Height / 2;
+                double offset = center - _scroller.ViewportHeight / 2;
+                if (offset < 0) offset = 0;
+                if (offset > _scroller.ScrollableHeight) offset = _scroller.ScrollableHeight;
+                _scroller.ScrollToVerticalOffset(offset);
+            }
+            catch { }
+        }
+
         private UIElement BuildTaskRow(TaskItem t, DateTime now)
         {
             bool active = t.IsActiveNow(now);
@@ -315,7 +374,9 @@ namespace MultimediaClient
             row.Margin = new Thickness(0, 0, 0, 8 * _scale);
             if (active) row.Background = BrushAmberBg;
 
-            // 两列:时间列固定不换行,右列是"项目 + 备注"上下两行
+            StackPanel body = new StackPanel();
+
+            // 第一行:时间 + 项目标题
             Grid grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -327,8 +388,6 @@ namespace MultimediaClient
             time.VerticalAlignment = VerticalAlignment.Top;
             Grid.SetColumn(time, 0);
             grid.Children.Add(time);
-
-            StackPanel body = new StackPanel();
 
             TextBlock title = MakeText(34 * _scale,
                 past ? BrushDim : BrushWhite, active ? FontWeights.Bold : FontWeights.SemiBold);
@@ -342,24 +401,24 @@ namespace MultimediaClient
                 tagRun.FontWeight = FontWeights.Bold;
                 title.Inlines.Add(tagRun);
             }
-            body.Children.Add(title);
+            Grid.SetColumn(title, 1);
+            grid.Children.Add(title);
 
-            // 备注:有内容才显示,稍小一号、浅色,保证远距离可读
+            body.Children.Add(grid);
+
+            // 备注:整行显示,不再挤在时间列右侧,长备注也能充分利用面板宽度
             if (t.Remark.Length > 0)
             {
                 TextBlock remark = MakeText(25 * _scale,
                     past ? BrushDim : BrushRemark, FontWeights.Normal);
                 remark.Text = "备注:" + t.Remark;
-                remark.Margin = new Thickness(0, 4 * _scale, 0, 0);
+                remark.Margin = new Thickness(0, 6 * _scale, 0, 0);
                 body.Children.Add(remark);
             }
 
-            Grid.SetColumn(body, 1);
-            grid.Children.Add(body);
+            if (past) body.Opacity = 0.55;
 
-            if (past) grid.Opacity = 0.55;
-
-            row.Child = grid;
+            row.Child = body;
             return row;
         }
 

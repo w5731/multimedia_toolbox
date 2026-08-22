@@ -10,7 +10,7 @@ namespace MultimediaClient
     /// </summary>
     internal static class AppHost
     {
-        public const string Version = "1.2.0";
+        public const string Version = "1.3.0";
 
         private static ApiClient _api;
         private static PollService _poll;
