@@ -15,6 +15,7 @@ namespace MultimediaClient
         public event Action<CallInfo> CallReceived;
         public event Action<bool> OnlineChanged;
         public event Action AuthInvalid;
+        public event Action<string> UpdateAvailable;
 
         private readonly ApiClient _api;
         private readonly Dispatcher _ui;
@@ -109,6 +110,14 @@ namespace MultimediaClient
             if (version != DataStore.DataVersion)
             {
                 FetchData(version);
+            }
+
+            // 自动更新:服务器发布了更高版本时通知主程序(旧服务器无该字段,自动跳过)
+            string latest = Json.GetString(r.Data, "latest_version", "");
+            if (SelfUpdate.ShouldUpdate(latest))
+            {
+                Action<string> ua = UpdateAvailable;
+                if (ua != null) _ui.BeginInvoke(new Action(delegate() { ua(latest); }));
             }
 
             Dictionary<string, object> call = Json.GetObject(r.Data, "pending_call");

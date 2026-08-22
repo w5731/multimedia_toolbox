@@ -312,6 +312,7 @@ async function loadClientPage() {
         </td></tr>`).join('')
     : '<tr><td colspan="7" class="empty">暂无客户端,先为班级生成配对码</td></tr>';
   loadSettings();
+  loadRelease();
 }
 
 window.genPairCode = async (classId, className) => {
@@ -357,6 +358,15 @@ async function loadSettings() {
   $('set-volume').value = d.settings.volume;
   $('set-position').value = d.settings.overlay_position;
   $('set-fontscale').value = String(d.settings.font_scale);
+}
+
+// ---------- 客户端版本发布 ----------
+async function loadRelease() {
+  const d = await api('/admin/client-release');
+  const r = d.release;
+  $('release-info').innerHTML = r
+    ? `当前已发布:<b>v${esc(r.version)}</b> · ${(r.size / 1024).toFixed(0)} KB · ${esc(r.uploaded_at)} 由 ${esc(r.uploaded_by || '-')} 上传`
+    : '尚未发布过客户端安装包,教室客户端不会自动更新。';
 }
 
 // ---------- 通知 ----------
@@ -508,6 +518,27 @@ function bindEvents() {
         font_scale: Number($('set-fontscale').value),
       });
       toast('设置已下发,客户端约 3 秒内生效');
+    } catch (e) { toast(e.message, 'err'); }
+  });
+
+  // 版本发布:exe 以原始字节流上传,版本号放在请求头
+  $('btn-upload-release').addEventListener('click', async () => {
+    const v = $('rel-version').value.trim();
+    const f = $('rel-file').files[0];
+    if (!/^\d+\.\d+\.\d+$/.test(v)) { toast('版本号格式应为 x.y.z,例如 1.1.0', 'err'); return; }
+    if (!f) { toast('请选择客户端安装包(.exe)', 'err'); return; }
+    try {
+      const r = await fetch('/api/admin/client-release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Client-Version': v },
+        body: f,
+      });
+      if (r.status === 401) { location.href = '/login.html'; return; }
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || '上传失败');
+      $('rel-file').value = '';
+      toast(`v${v} 已发布,在线客户端将自动更新`);
+      loadRelease();
     } catch (e) { toast(e.message, 'err'); }
   });
 

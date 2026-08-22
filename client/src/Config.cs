@@ -19,6 +19,8 @@ namespace MultimediaClient
         public static string ExitPassword = "123456";
         public static string OverlayMode = "normal"; // normal | wallpaper
         public static bool AutoStart = true;
+        // 最近一次已成功下载并应用的更新版本号,防止服务器发错包导致反复更新
+        public static string LastUpdateVersion = "";
 
         public static bool IsPaired
         {
@@ -71,6 +73,7 @@ namespace MultimediaClient
                 ExitPassword = Json.GetString(d, "exit_password", "123456");
                 OverlayMode = Json.GetString(d, "overlay_mode", "normal");
                 AutoStart = Json.GetBool(d, "auto_start", true);
+                LastUpdateVersion = Json.GetString(d, "last_update_version", "");
             }
             catch (Exception ex)
             {
@@ -90,6 +93,7 @@ namespace MultimediaClient
                 d["exit_password"] = ExitPassword;
                 d["overlay_mode"] = OverlayMode;
                 d["auto_start"] = AutoStart;
+                d["last_update_version"] = LastUpdateVersion;
                 AtomicWrite(ConfigPath, Json.Serialize(d));
             }
             catch (Exception ex)

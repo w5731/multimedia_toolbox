@@ -255,6 +255,32 @@ router.post('/calls/:id/cancel', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- 客户端版本发布(自动更新) ----------
+const updates = require('../updates');
+
+router.get('/client-release', (req, res) => {
+  res.json({ ok: true, release: updates.currentRelease() });
+});
+
+// 上传新客户端:body 为 exe 原始字节(application/octet-stream),版本号走请求头
+router.post('/client-release', express.raw({ type: 'application/octet-stream', limit: '30mb' }), (req, res) => {
+  const version = String(req.headers['x-client-version'] || '').trim().slice(0, 32);
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    return res.status(400).json({ ok: false, error: '版本号格式应为 x.y.z,例如 1.1.0' });
+  }
+  const buf = req.body;
+  if (!Buffer.isBuffer(buf) || buf.length < 1024) {
+    return res.status(400).json({ ok: false, error: '未收到有效的安装包文件' });
+  }
+  // PE 文件必须以 "MZ" 开头,防止误传其他文件
+  if (buf[0] !== 0x4d || buf[1] !== 0x5a) {
+    return res.status(400).json({ ok: false, error: '文件不是有效的 Windows 可执行程序(.exe)' });
+  }
+  updates.saveRelease(version, buf, req.teacher.display_name || req.teacher.username, nowStr());
+  audit(req.teacher, '发布客户端版本', `v${version} (${(buf.length / 1024).toFixed(0)}KB)`);
+  res.json({ ok: true, release: updates.currentRelease() });
+});
+
 // ---------- 通知栏 ----------
 router.get('/notice', (req, res) => {
   const classId = Number(req.query.class_id);

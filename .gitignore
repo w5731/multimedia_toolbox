@@ -13,3 +13,5 @@ client/*.png
 .zcode/
 *.log
 nul
+server/updates/
+client/*.bak

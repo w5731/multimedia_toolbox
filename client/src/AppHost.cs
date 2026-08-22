@@ -10,7 +10,7 @@ namespace MultimediaClient
     /// </summary>
     internal static class AppHost
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
 
         private static ApiClient _api;
         private static PollService _poll;
@@ -42,6 +42,7 @@ namespace MultimediaClient
             _poll.CallReceived += OnCallReceived;
             _poll.OnlineChanged += OnOnlineChanged;
             _poll.AuthInvalid += OnAuthInvalid;
+            _poll.UpdateAvailable += OnUpdateAvailable;
             DataStore.Updated += delegate { _overlay.ApplySettings(); };
             _poll.Start();
 
@@ -95,6 +96,21 @@ namespace MultimediaClient
         {
             if (_overlay != null) _overlay.SetOffline(!online);
             if (_tray != null) _tray.SetStatus(online, Config.ClassName);
+        }
+
+        // 服务器发布了新版本:后台下载完成后重启完成热替换
+        private static void OnUpdateAvailable(string version)
+        {
+            if (_stopping) return;
+            // 叫号弹窗期间不打断学生,3 秒后的心跳会再次通知,届时再更新
+            if (_popup != null) return;
+            SelfUpdate.Begin(_api, version, _app.Dispatcher, ApplyUpdate);
+        }
+
+        private static void ApplyUpdate(string batPath)
+        {
+            if (_stopping) return;
+            SelfUpdate.RestartWith(batPath);
         }
 
         private static void OnAuthInvalid()

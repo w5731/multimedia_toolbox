@@ -1,7 +1,9 @@
 // 客户端 API:配对 / 心跳 / 数据拉取 / 叫号回执
 const express = require('express');
+const fs = require('fs');
 const db = require('../db');
 const config = require('../config');
+const updates = require('../updates');
 const { nowStr, plusMinutes, randomToken } = require('../util');
 const { getSettings } = require('../helpers');
 
@@ -67,7 +69,12 @@ router.post('/heartbeat', clientAuth, (req, res) => {
                   WHERE class_id = ? AND status = 'pending' ORDER BY id LIMIT 1`).get(c.class_id)
     : null;
   const s = c.class_id ? getSettings(c.class_id) : { data_version: 0 };
-  res.json({ ok: true, server_time: nowStr(), data_version: s.data_version, pending_call: call || null });
+  const rel = updates.currentRelease();
+  res.json({
+    ok: true, server_time: nowStr(), data_version: s.data_version, pending_call: call || null,
+    // 已发布的最新客户端版本号(未发布为空串);旧版本客户端会忽略该字段
+    latest_version: rel ? rel.version : '',
+  });
 });
 
 // 全量数据:任务 + 通知 + 设置(版本号变化时客户端重新拉取)
@@ -93,6 +100,23 @@ router.get('/data', clientAuth, (req, res) => {
     tasks,
     data_version: s.data_version,
   });
+});
+
+// 更新信息:版本号 + 大小 + sha256 校验值
+router.get('/update-info', clientAuth, (req, res) => {
+  const rel = updates.currentRelease();
+  res.json({ ok: true, update: rel || null });
+});
+
+// 下载最新客户端安装包(流式,带 Content-Length 便于校验)
+router.get('/update-download', clientAuth, (req, res) => {
+  const rel = updates.currentRelease();
+  if (!rel || !fs.existsSync(updates.EXE_PATH)) {
+    return res.status(404).json({ ok: false, error: '暂无可用更新' });
+  }
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Length', String(rel.size));
+  fs.createReadStream(updates.EXE_PATH).pipe(res);
 });
 
 // 叫号回执:event = shown | closed
