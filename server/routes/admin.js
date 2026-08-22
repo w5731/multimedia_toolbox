@@ -262,8 +262,8 @@ router.get('/client-release', (req, res) => {
   res.json({ ok: true, release: updates.currentRelease() });
 });
 
-// 上传新客户端:body 为 exe 原始字节(application/octet-stream),版本号走请求头
-router.post('/client-release', express.raw({ type: 'application/octet-stream', limit: '30mb' }), (req, res) => {
+// 上传新客户端:仅管理员;body 为 exe 原始字节(application/octet-stream),版本号走请求头
+router.post('/client-release', requireAdmin, express.raw({ type: 'application/octet-stream', limit: '30mb' }), (req, res) => {
   const version = String(req.headers['x-client-version'] || '').trim().slice(0, 32);
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
     return res.status(400).json({ ok: false, error: '版本号格式应为 x.y.z,例如 1.1.0' });

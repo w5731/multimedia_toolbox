@@ -362,6 +362,10 @@ async function loadSettings() {
 
 // ---------- 客户端版本发布 ----------
 async function loadRelease() {
+  // 上传发布仅管理员可见,普通教师只读
+  const isAdmin = !!(me && me.is_admin);
+  $('release-upload-row').style.display = isAdmin ? '' : 'none';
+  $('release-admin-only').style.display = isAdmin ? 'none' : '';
   const d = await api('/admin/client-release');
   const r = d.release;
   $('release-info').innerHTML = r

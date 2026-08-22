@@ -150,11 +150,12 @@
       <div class="card">
         <h3>客户端版本发布(自动更新)</h3>
         <div class="hint" id="release-info">正在读取…</div>
-        <div class="form-inline" style="margin-top:12px">
+        <div class="form-inline" style="margin-top:12px" id="release-upload-row">
           <div class="form-row"><label>新版本号</label><input type="text" id="rel-version" placeholder="例如 1.1.0" style="width:130px"></div>
           <div class="form-row"><label>安装包(.exe)</label><input type="file" id="rel-file" accept=".exe"></div>
           <button class="btn primary" id="btn-upload-release">上传发布</button>
         </div>
+        <div class="hint" id="release-admin-only" style="display:none">仅管理员可发布更新包,如有新版本请联系管理员。</div>
         <div class="hint">发布后,所有在线客户端约 3 秒内自动检测到新版本,自行下载并重启完成升级,无需到教室操作。版本号必须高于客户端当前版本。</div>
       </div>
     </div>
