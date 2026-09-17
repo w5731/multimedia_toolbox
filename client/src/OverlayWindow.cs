@@ -35,7 +35,12 @@ namespace MultimediaClient
         private StackPanel _tasksPanel;
         private ScrollViewer _scroller;
         private List<TaskItem> _todayList = new List<TaskItem>();
-        private bool _centerPending;
+        // 用户在任务列表上手动滚动(拖动/滚轮)后,暂停自动定位;停止操作 10 秒恢复
+        private const int UserScrollIdleMs = 10000;
+        private int _lastUserScrollTick;
+        private bool _dragging;
+        private Point _dragStartPoint;
+        private double _dragStartOffset;
         private TextBlock _countdownText;
         private string _position = "right";
         private double _scale = 1.0;
@@ -64,6 +69,7 @@ namespace MultimediaClient
             _timer.Interval = TimeSpan.FromMilliseconds(500);
             _timer.Tick += delegate { Tick(); };
             _timer.Start();
+            _lastUserScrollTick = Environment.TickCount - UserScrollIdleMs;
         }
 
         /// <summary>应用服务器下发的位置与字号设置,并整体重建界面</summary>
@@ -91,14 +97,15 @@ namespace MultimediaClient
             }
         }
 
-        private static IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_NCHITTEST = 0x0084;
             const int WM_WINDOWPOSCHANGING = 0x0046;
             if (msg == WM_NCHITTEST)
             {
                 handled = true;
-                return new IntPtr(-1); // HTTRANSPARENT
+                // 任务列表超出可视高度时,列表区域接受鼠标(拖动/滚轮);其余区域一律穿透
+                return IsOverTaskList(lParam) ? new IntPtr(1) : new IntPtr(-1); // HTCLIENT : HTTRANSPARENT
             }
             if (msg == WM_WINDOWPOSCHANGING && lParam != IntPtr.Zero)
             {
@@ -114,6 +121,26 @@ namespace MultimediaClient
                 }
             }
             return IntPtr.Zero;
+        }
+
+        /// <summary>屏幕坐标是否落在可滚动的任务列表区域内(用于局部放行鼠标事件)</summary>
+        private bool IsOverTaskList(IntPtr lParam)
+        {
+            try
+            {
+                if (_scroller == null || !_scroller.IsVisible
+                    || _scroller.ActualWidth <= 0 || _scroller.ScrollableHeight <= 0) return false;
+                long lp = lParam.ToInt64();
+                int x = (short)(lp & 0xFFFF);
+                int y = (short)((lp >> 16) & 0xFFFF);
+                Point topLeft = _scroller.PointToScreen(new Point(0, 0));
+                Point bottomRight = _scroller.PointToScreen(new Point(_scroller.ActualWidth, _scroller.ActualHeight));
+                return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // ---------------- 布局 ----------------
@@ -181,16 +208,13 @@ namespace MultimediaClient
             scroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             _tasksPanel = new StackPanel();
             scroller.Content = _tasksPanel;
-            // 布局完成后(RenderSize 有效)再执行待定的居中滚动
-            scroller.LayoutUpdated += delegate
-            {
-                if (_centerPending)
-                {
-                    _centerPending = false;
-                    CenterOnActive();
-                }
-            };
             _scroller = scroller;
+            // 手动滚动:按住拖动或滚轮;操作后暂停自动回中
+            scroller.PreviewMouseLeftButtonDown += OnScrollDragStart;
+            scroller.PreviewMouseMove += OnScrollDragMove;
+            scroller.PreviewMouseLeftButtonUp += OnScrollDragEnd;
+            scroller.LostMouseCapture += delegate { _dragging = false; };
+            scroller.PreviewMouseWheel += delegate { MarkUserScroll(); };
             panel.Children.Add(scroller);
 
             // 下一项倒计时
@@ -244,6 +268,8 @@ namespace MultimediaClient
                 _lastRebuildDate = now.Date;
                 Rebuild();
             }
+            // 用户 10 秒未操作列表时,自动回到当前/即将开始的任务;空闲期间随状态变化持续跟随
+            if (Environment.TickCount - _lastUserScrollTick >= UserScrollIdleMs) CenterOnActive();
         }
 
         public void Rebuild()
@@ -291,8 +317,6 @@ namespace MultimediaClient
                     _tasksPanel.Children.Add(BuildTaskRow(t, now));
                 }
             }
-            // 布局完成后(LayoutUpdated)把当前进行中(或下一个)的任务滚动到列表中间
-            _centerPending = true;
 
             // 下一项倒计时
             TaskItem next = null;
@@ -309,7 +333,17 @@ namespace MultimediaClient
             }
             else if (today.Count > 0)
             {
-                _countdownText.Text = "今日任务已全部完成";
+                // 当天已没有未开始的任务,但最后一个任务可能仍在进行中,此时不能说"已全部完成"
+                TaskItem active = null;
+                foreach (TaskItem t in today)
+                {
+                    if (t.IsActiveNow(now)) { active = t; break; }
+                }
+                _countdownText.Text = active == null
+                    ? "今日任务已全部完成"
+                    : (active.IsRange
+                        ? "当前进行中  " + active.Title + "  ·  " + active.EndTime + " 结束"
+                        : "当前进行中  " + active.Title);
                 _countdownText.Visibility = Visibility.Visible;
             }
             else
@@ -319,9 +353,10 @@ namespace MultimediaClient
         }
 
         /// <summary>
-        /// 任务列表超出可视高度时,自动滚动到"焦点任务"上下居中:
-        /// 优先当前进行中的任务;没有进行中的则选下一个即将开始的。
-        /// 看板不可交互(鼠标穿透),所以始终自动定位,无需人工滚动。
+        /// 任务列表超出可视高度时,滚动到"焦点任务"上下居中(首尾自动夹紧:
+        /// 焦点是第一条时贴顶、最后一条时贴底)。优先当前进行中的任务;
+        /// 没有进行中的则选下一个即将开始的。用户手动滚动后暂停自动定位,
+        /// 停止操作 10 秒后恢复(由 Tick 驱动)。
         /// </summary>
         private void CenterOnActive()
         {
@@ -359,6 +394,39 @@ namespace MultimediaClient
                 _scroller.ScrollToVerticalOffset(offset);
             }
             catch { }
+        }
+
+        private void MarkUserScroll()
+        {
+            _lastUserScrollTick = Environment.TickCount;
+        }
+
+        private void OnScrollDragStart(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_scroller.ScrollableHeight <= 0) return;
+            _dragging = true;
+            _dragStartPoint = e.GetPosition(_scroller);
+            _dragStartOffset = _scroller.VerticalOffset;
+            _scroller.CaptureMouse();
+            MarkUserScroll();
+        }
+
+        private void OnScrollDragMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (!_dragging) return;
+            double offset = _dragStartOffset - (e.GetPosition(_scroller).Y - _dragStartPoint.Y);
+            if (offset < 0) offset = 0;
+            if (offset > _scroller.ScrollableHeight) offset = _scroller.ScrollableHeight;
+            _scroller.ScrollToVerticalOffset(offset);
+            MarkUserScroll();
+        }
+
+        private void OnScrollDragEnd(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (!_dragging) return;
+            _dragging = false;
+            _scroller.ReleaseMouseCapture();
+            MarkUserScroll();
         }
 
         private UIElement BuildTaskRow(TaskItem t, DateTime now)
