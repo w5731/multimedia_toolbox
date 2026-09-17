@@ -38,6 +38,7 @@ function validateTask(body) {
   if (!TIME_RE.test(body.start_time || '')) return '开始时间格式应为 HH:MM';
   if (body.end_time && !TIME_RE.test(body.end_time)) return '结束时间格式应为 HH:MM';
   if (body.end_time && body.end_time <= body.start_time) return '结束时间应晚于开始时间';
+  if (String(body.reminder_text || '').trim().length > 300) return '提醒提示文本不能超过300字';
   const mode = body.date_mode || 'daily';
   if (!['once', 'range', 'weekly', 'daily'].includes(mode)) return '无效的日期模式';
   if (mode === 'once' && !DATE_RE.test(body.date_start || '')) return '单次任务需要选择日期';

@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   date_start TEXT DEFAULT '',
   date_end TEXT DEFAULT '',
   weekdays TEXT DEFAULT '',
+  reminder_enabled INTEGER DEFAULT 0,
+  reminder_text TEXT DEFAULT '',
   enabled INTEGER DEFAULT 1,
   sort INTEGER DEFAULT 0,
   created_by INTEGER,
@@ -119,8 +121,10 @@ CREATE INDEX IF NOT EXISTS idx_sessions_teacher ON sessions(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
 `);
 
-// 旧数据库升级:为 tasks 补充备注列(列已存在时会抛错,忽略)
+// 旧数据库升级:为 tasks 补充新列(列已存在时会抛错,忽略)
 try { db.exec(`ALTER TABLE tasks ADD COLUMN remark TEXT DEFAULT ''`); } catch (e) { /* 列已存在 */ }
+try { db.exec(`ALTER TABLE tasks ADD COLUMN reminder_enabled INTEGER DEFAULT 0`); } catch (e) { /* 列已存在 */ }
+try { db.exec(`ALTER TABLE tasks ADD COLUMN reminder_text TEXT DEFAULT ''`); } catch (e) { /* 列已存在 */ }
 
 // 首次启动创建默认管理员
 const teacherCount = db.prepare('SELECT COUNT(*) AS c FROM teachers').get().c;

@@ -250,6 +250,15 @@
       <div class="form-row"><label id="f-date-start-label">日期</label><input type="date" id="f-date-start"></div>
       <div class="form-row" id="f-date-end-row"><label>结束日期</label><input type="date" id="f-date-end"></div>
     </div>
+    <div class="reminder-box">
+      <label class="reminder-toggle"><input type="checkbox" id="f-reminder-enabled"> 结束时全屏提醒</label>
+      <div class="hint" id="f-reminder-time-hint">时间点任务在开始时间提醒；时间段任务在结束时间提醒。</div>
+      <div class="form-row" id="f-reminder-text-row" style="display:none">
+        <label>提醒提示文本（可留空）</label>
+        <textarea id="f-reminder-text" rows="3" maxlength="300" placeholder="例如：请整理桌面，准备下一节课"></textarea>
+        <div class="hint">将显示在全屏提醒中；5 分钟后自动退出，提前退出需要客户端管理密码。</div>
+      </div>
+    </div>
     <div class="actions">
       <button class="btn gray" id="task-cancel">取消</button>
       <button class="btn primary" id="task-save">保存</button>

@@ -104,7 +104,8 @@ namespace MultimediaClient
 
             SetOnline(true);
             _delayMs = 3000;
-            TimeSync.Update(Json.GetString(r.Data, "server_time", ""));
+            DataStore.ServerTime = Json.GetString(r.Data, "server_time", "");
+            TimeSync.Update(DataStore.ServerTime);
 
             int version = Json.GetInt(r.Data, "data_version", -1);
             if (version != DataStore.DataVersion)

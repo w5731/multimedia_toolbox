@@ -56,7 +56,11 @@ function taskTimeText(t) {
 // 内容单元格:标题 + 可选的备注小字
 function taskTitleHtml(t) {
   const remark = (t.remark || '').trim();
-  return esc(t.title) + (remark ? `<div class="cell-remark">备注:${esc(remark)}</div>` : '');
+  const reminder = t.reminder_enabled
+    ? `<div class="cell-reminder">全屏提醒${t.reminder_text ? `：${esc(t.reminder_text)}` : ''}</div>` : '';
+  return esc(t.title)
+    + (remark ? `<div class="cell-remark">备注:${esc(remark)}</div>` : '')
+    + reminder;
 }
 
 function taskDateText(t) {
@@ -199,10 +203,13 @@ function openTaskModal(t) {
   $('f-mode').value = t ? t.date_mode : 'daily';
   $('f-date-start').value = t ? (t.date_start || '') : todayStr();
   $('f-date-end').value = t ? (t.date_end || '') : todayStr();
+  $('f-reminder-enabled').checked = !!(t && t.reminder_enabled);
+  $('f-reminder-text').value = t ? (t.reminder_text || '') : '';
   document.querySelectorAll('#f-weekdays input').forEach(cb => {
     cb.checked = t ? (t.weekdays || '').split(',').includes(cb.value) : ['1', '2', '3', '4', '5'].includes(cb.value);
   });
   updateTaskModeUI();
+  updateReminderUI();
   $('task-modal').classList.add('show');
 }
 
@@ -212,6 +219,15 @@ function updateTaskModeUI() {
   $('f-date-row').style.display = (mode === 'once' || mode === 'range') ? '' : 'none';
   $('f-date-end-row').style.display = mode === 'range' ? '' : 'none';
   $('f-date-start-label').textContent = mode === 'range' ? '开始日期' : '日期';
+}
+
+function updateReminderUI() {
+  const enabled = $('f-reminder-enabled').checked;
+  const isRange = !!$('f-end').value;
+  $('f-reminder-text-row').style.display = enabled ? '' : 'none';
+  $('f-reminder-time-hint').textContent = isRange
+    ? '该时间段将在结束时间全屏提醒。'
+    : '该时间点将在开始时间全屏提醒。';
 }
 
 async function saveTask() {
@@ -226,6 +242,8 @@ async function saveTask() {
     date_end: mode === 'range' ? $('f-date-end').value : '',
     weekdays: mode === 'weekly'
       ? Array.from(document.querySelectorAll('#f-weekdays input:checked')).map(c => c.value).join(',') : '',
+    reminder_enabled: $('f-reminder-enabled').checked,
+    reminder_text: $('f-reminder-enabled').checked ? $('f-reminder-text').value.trim() : '',
   };
   try {
     if (editingTaskId) {
@@ -444,6 +462,9 @@ function bindEvents() {
   $('task-preview-date').addEventListener('change', loadTasks);
   $('btn-add-task').addEventListener('click', () => openTaskModal(null));
   $('f-mode').addEventListener('change', updateTaskModeUI);
+  $('f-end').addEventListener('input', updateReminderUI);
+  $('f-end').addEventListener('change', updateReminderUI);
+  $('f-reminder-enabled').addEventListener('change', updateReminderUI);
   $('task-save').addEventListener('click', saveTask);
   $('task-cancel').addEventListener('click', () => $('task-modal').classList.remove('show'));
   $('btn-copy-day').addEventListener('click', () => {

@@ -14,6 +14,8 @@ namespace MultimediaClient
         public string DateStart = "";
         public string DateEnd = "";
         public string Weekdays = "";    // "1,2,3,4,5"
+        public bool ReminderEnabled;
+        public string ReminderText = "";
 
         public static TaskItem FromJson(IDictionary<string, object> d)
         {
@@ -27,6 +29,8 @@ namespace MultimediaClient
             t.DateStart = Json.GetString(d, "date_start", "");
             t.DateEnd = Json.GetString(d, "date_end", "");
             t.Weekdays = Json.GetString(d, "weekdays", "");
+            t.ReminderEnabled = Json.GetBool(d, "reminder_enabled", false);
+            t.ReminderText = Json.GetString(d, "reminder_text", "");
             return t;
         }
 
@@ -35,7 +39,7 @@ namespace MultimediaClient
             Dictionary<string, object> d = new Dictionary<string, object>();
             d["id"] = Id; d["title"] = Title; d["remark"] = Remark; d["start_time"] = StartTime; d["end_time"] = EndTime;
             d["date_mode"] = DateMode; d["date_start"] = DateStart; d["date_end"] = DateEnd;
-            d["weekdays"] = Weekdays;
+            d["weekdays"] = Weekdays; d["reminder_enabled"] = ReminderEnabled; d["reminder_text"] = ReminderText;
             return d;
         }
 
@@ -72,6 +76,14 @@ namespace MultimediaClient
         }
 
         public bool IsRange { get { return EndTime.Length > 0; } }
+
+        /// <summary>当天的提醒时刻:时间点取开始时间,时间段取结束时间</summary>
+        public DateTime ReminderOn(DateTime date)
+        {
+            string time = IsRange ? EndTime : StartTime;
+            return DateTime.ParseExact(date.ToString("yyyy-MM-dd") + " " + time,
+                "yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         /// <summary>此刻是否处于该任务进行中(时间段任务在区间内;时间点任务开始后 5 分钟内)</summary>
         public bool IsActiveNow(DateTime now)

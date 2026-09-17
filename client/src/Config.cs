@@ -21,6 +21,8 @@ namespace MultimediaClient
         public static bool AutoStart = true;
         // 最近一次已成功下载并应用的更新版本号,防止服务器发错包导致反复更新
         public static string LastUpdateVersion = "";
+        // 已展示的任务提醒键(taskId|yyyy-MM-dd|HH:mm),防止重启或重复拉取后重复弹出
+        public static List<string> ShownTaskReminders = new List<string>();
 
         public static bool IsPaired
         {
@@ -74,6 +76,13 @@ namespace MultimediaClient
                 OverlayMode = Json.GetString(d, "overlay_mode", "normal");
                 AutoStart = Json.GetBool(d, "auto_start", true);
                 LastUpdateVersion = Json.GetString(d, "last_update_version", "");
+                ShownTaskReminders = new List<string>();
+                foreach (object item in Json.GetArray(d, "shown_task_reminders"))
+                {
+                    string key = item as string;
+                    if (!String.IsNullOrEmpty(key) && !ShownTaskReminders.Contains(key))
+                        ShownTaskReminders.Add(key);
+                }
             }
             catch (Exception ex)
             {
@@ -94,6 +103,9 @@ namespace MultimediaClient
                 d["overlay_mode"] = OverlayMode;
                 d["auto_start"] = AutoStart;
                 d["last_update_version"] = LastUpdateVersion;
+                List<object> reminderKeys = new List<object>();
+                foreach (string key in ShownTaskReminders) reminderKeys.Add(key);
+                d["shown_task_reminders"] = reminderKeys;
                 AtomicWrite(ConfigPath, Json.Serialize(d));
             }
             catch (Exception ex)

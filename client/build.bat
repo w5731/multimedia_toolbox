@@ -11,7 +11,7 @@ if not exist "%FRAMEWORK%\csc.exe" set FRAMEWORK=%SystemRoot%\Microsoft.NET\Fram
   /out:MultimediaClient.exe ^
   src\Win32.cs src\Json.cs src\Models.cs src\Config.cs src\Logger.cs src\DataStore.cs ^
   src\CacheService.cs src\ApiClient.cs src\PollService.cs src\AudioService.cs src\AutoStart.cs ^
-  src\UiKit.cs src\OverlayWindow.cs src\CallPopupWindow.cs src\PairingWindow.cs ^
+  src\UiKit.cs src\OverlayWindow.cs src\CallPopupWindow.cs src\TaskReminderWindow.cs src\TaskReminderService.cs src\PairingWindow.cs ^
   src\SettingsWindow.cs src\PasswordWindow.cs src\TrayService.cs src\SelfUpdate.cs src\AppHost.cs src\Program.cs
 
 if %errorlevel%==0 (

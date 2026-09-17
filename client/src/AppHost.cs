@@ -10,13 +10,15 @@ namespace MultimediaClient
     /// </summary>
     internal static class AppHost
     {
-        public const string Version = "1.3.0";
+        public const string Version = "1.4.3";
 
         private static ApiClient _api;
         private static PollService _poll;
         private static OverlayWindow _overlay;
         private static TrayService _tray;
         private static CallPopupWindow _popup;
+        private static TaskReminderService _taskReminders;
+        private static string _pendingUpdateBat = "";
         private static Application _app;
         private static bool _stopping;
 
@@ -44,6 +46,12 @@ namespace MultimediaClient
             _poll.AuthInvalid += OnAuthInvalid;
             _poll.UpdateAvailable += OnUpdateAvailable;
             DataStore.Updated += delegate { _overlay.ApplySettings(); };
+            _taskReminders = new TaskReminderService();
+            _taskReminders.ShowingChanged += delegate(bool showing)
+            {
+                if (!showing) TryApplyPendingUpdate();
+            };
+            _taskReminders.Start();
             _poll.Start();
 
             Logger.Info("客户端已启动 v" + Version + " 班级:" + Config.ClassName);
@@ -67,6 +75,7 @@ namespace MultimediaClient
             _stopping = true;
             Logger.Info("客户端退出");
             if (_poll != null) _poll.Stop();
+            if (_taskReminders != null) _taskReminders.Stop();
             if (_tray != null) _tray.Dispose();
             if (_app != null) _app.Shutdown();
         }
@@ -86,6 +95,7 @@ namespace MultimediaClient
             {
                 _popup = null;
                 _poll.AckCall(c.Id, "closed");
+                TryApplyPendingUpdate();
             };
             popup.ShowPopup();
             _poll.AckCall(call.Id, "shown");
@@ -102,15 +112,30 @@ namespace MultimediaClient
         private static void OnUpdateAvailable(string version)
         {
             if (_stopping) return;
-            // 叫号弹窗期间不打断学生,3 秒后的心跳会再次通知,届时再更新
-            if (_popup != null) return;
+            // 叫号或任务全屏提醒期间不打断学生,3 秒后的心跳会再次通知,届时再更新
+            if (_popup != null || (_taskReminders != null && _taskReminders.IsShowing)) return;
             SelfUpdate.Begin(_api, version, _app.Dispatcher, ApplyUpdate);
         }
 
         private static void ApplyUpdate(string batPath)
         {
             if (_stopping) return;
+            if (_popup != null || (_taskReminders != null && _taskReminders.IsShowing))
+            {
+                _pendingUpdateBat = batPath;
+                Logger.Info("更新包已就绪,等待提醒窗口关闭后应用");
+                return;
+            }
             SelfUpdate.RestartWith(batPath);
+        }
+
+        private static void TryApplyPendingUpdate()
+        {
+            if (_stopping || _pendingUpdateBat.Length == 0) return;
+            if (_popup != null || (_taskReminders != null && _taskReminders.IsShowing)) return;
+            string bat = _pendingUpdateBat;
+            _pendingUpdateBat = "";
+            SelfUpdate.RestartWith(bat);
         }
 
         private static void OnAuthInvalid()

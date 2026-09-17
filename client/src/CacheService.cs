@@ -20,6 +20,7 @@ namespace MultimediaClient
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["data_version"] = DataStore.DataVersion;
                 d["server_time"] = DataStore.ServerTime;
+                d["cached_at"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 d["settings"] = DataStore.Settings.ToJson();
                 d["notice"] = DataStore.Notice.ToJson();
                 List<object> tasks = new List<object>();
@@ -51,7 +52,21 @@ namespace MultimediaClient
                     if (td != null) tasks.Add(TaskItem.FromJson(td));
                 }
                 DataStore.Tasks = tasks;
-                TimeSync.Update(DataStore.ServerTime);
+                // 新版缓存同时记录本机写入时刻。离线启动时按经过时长推进服务器时间，
+                // 避免把时钟冻结在上次拉取数据的时刻；旧版缓存没有该字段则等待心跳校准。
+                string cachedAtText = Json.GetString(d, "cached_at", "");
+                DateTime cachedAt;
+                DateTime serverAt;
+                if (DateTime.TryParseExact(cachedAtText, "yyyy-MM-dd HH:mm:ss",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out cachedAt) &&
+                    DateTime.TryParseExact(DataStore.ServerTime, "yyyy-MM-dd HH:mm:ss",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out serverAt))
+                {
+                    DateTime estimatedServerNow = serverAt.Add(DateTime.Now - cachedAt);
+                    TimeSync.Update(estimatedServerNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                }
             }
             catch (Exception ex)
             {
